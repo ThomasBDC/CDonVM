@@ -11,7 +11,6 @@ permissions:
 
 env:
   APP: CDonVM
-  IMAGE_REPO: ghcr.io/thomasbdc/cdonvm
   IMAGE_LATEST: ghcr.io/thomasbdc/cdonvm:latest
   IMAGE_SHA: ghcr.io/thomasbdc/cdonvm:${{ github.sha }}
   VM_HOST: ${{ secrets.VM_HOST }}
@@ -34,8 +33,8 @@ jobs:
       - name: Build & push image
         uses: docker/build-push-action@v6
         with:
-          context: .              
-          file: ./CDonVM/Dockerfile      
+          context: .
+          file: ./CDonVM/Dockerfile
           push: true
           tags: |
             ${{ env.IMAGE_LATEST }}
@@ -46,21 +45,23 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_cd
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_cd
           ssh-keyscan -H "${{ env.VM_HOST }}" >> ~/.ssh/known_hosts
+
       - name: Copy compose.yml to VM
         run: |
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} 'sudo mkdir -p /opt/${{ env.APP }} && sudo chown -R $USER:$USER /opt/${{ env.APP }}'
           scp -i ~/.ssh/id_cd CDonVM/ops/compose.yml ${{ env.VM_USER }}@${{ env.VM_HOST }}:/opt/${{ env.APP }}/compose.yml
+          # Si ton compose.yml a un placeholder, on remplace par l'image publiée :
+          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} "sed -i 's#ghcr.io/OWNER/REPO:latest#${{ env.IMAGE_LATEST }}#' /opt/${{ env.APP }}/compose.yml || true"
 
       - name: Deploy
         run: |
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} '
-            set -e
-            docker pull '"${{ env.IMAGE_LATEST }}"'
-            docker compose -f /opt/'"${{ env.APP }}"'/compose.yml up -d
+            set -Eeuo pipefail
+            cd /opt/'"${{ env.APP }}"'
+            # Met à jour et (re)lance les services définis dans compose.yml
+            docker compose -f compose.yml up -d --pull always
             docker image prune -f
           '
-
-
 
       - name: Smoke test
         run: |
