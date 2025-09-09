@@ -49,14 +49,15 @@ jobs:
 
       - name: Deploy on VM
         run: |
-          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} bash -lc "
+          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} '
             set -e
             cd /opt/${{ env.APP }}
-            docker pull ${{ env.IMAGE_LATEST }}
+            docker pull '"${{ env.IMAGE_LATEST }}"'
             sudo systemctl start cdonvm-compose || true
             docker compose up -d
             docker image prune -f
-          "
+          '
+
 
       - name: Smoke test
         run: |
