@@ -46,12 +46,20 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_cd
           ssh-keyscan -H "${{ env.VM_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Copy compose.yml to VM
+      - name: Copy ops folder to VM
         run: |
+          # Prépare le dossier cible
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} 'sudo mkdir -p /opt/${{ env.APP }} && sudo chown -R $USER:$USER /opt/${{ env.APP }}'
-          scp -i ~/.ssh/id_cd CDonVM/ops/compose.yml ${{ env.VM_USER }}@${{ env.VM_HOST }}:/opt/${{ env.APP }}/compose.yml
-          # Si ton compose.yml a un placeholder, on remplace par l'image publiée :
+      
+          # Copie récursive de tout CDonVM/ops → /opt/<APP>/
+          scp -r -i ~/.ssh/id_cd CDonVM/ops/* ${{ env.VM_USER }}@${{ env.VM_HOST }}:/opt/${{ env.APP }}/
+      
+          # (Optionnel) Patch l'image si compose.yml contient un placeholder
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} "sed -i 's#ghcr.io/OWNER/REPO:latest#${{ env.IMAGE_LATEST }}#' /opt/${{ env.APP }}/compose.yml || true"
+      
+          # (Sécu) Si app.env est attendu par compose et n'existe pas, crée un fichier vide
+          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} 'mkdir -p /opt/${{ env.APP }}/app && [ -f /opt/${{ env.APP }}/app/app.env ] || : > /opt/${{ env.APP }}/app/app.env'
+
 
       - name: Deploy
         run: |
