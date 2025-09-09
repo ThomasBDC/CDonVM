@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/ThomasBDC/CDonVM:latest    # change OWNER/REPO
+    image: ghcr.io/thomasbdc/cdonvm:latest    # change OWNER/REPO
     env_file:
       - ./app/app.env
     restart: always
