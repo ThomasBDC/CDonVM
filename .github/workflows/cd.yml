@@ -1,0 +1,61 @@
+name: CD Docker to Azure VM (CDonVM)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  APP: CDonVM
+  IMAGE_LATEST: ghcr.io/${{ github.repository }}:latest
+  IMAGE_SHA: ghcr.io/${{ github.repository }}:${{ github.sha }}
+  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_USER: ${{ secrets.VM_USER }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_LATEST }}
+            ${{ env.IMAGE_SHA }}
+
+      - name: Prepare SSH
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_cd
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_cd
+          ssh-keyscan -H "${{ env.VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on VM
+        run: |
+          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} bash -lc "
+            set -e
+            cd /opt/${{ env.APP }}
+            docker pull ${{ env.IMAGE_LATEST }}
+            sudo systemctl start cdonvm-compose || true
+            docker compose up -d
+            docker image prune -f
+          "
+
+      - name: Smoke test
+        run: |
+          curl -I --max-time 5 http://${{ env.VM_HOST }} | (head -n 1 || true)
