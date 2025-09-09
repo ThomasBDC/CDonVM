@@ -11,8 +11,9 @@ permissions:
 
 env:
   APP: CDonVM
-  IMAGE_LATEST: ghcr.io/${{ github.repository }}:latest
-  IMAGE_SHA: ghcr.io/${{ github.repository }}:${{ github.sha }}
+  IMAGE_REPO: ghcr.io/thomasbdc/cdonvm
+  IMAGE_LATEST: ghcr.io/thomasbdc/cdonvm:latest
+  IMAGE_SHA: ghcr.io/thomasbdc/cdonvm:${{ github.sha }}
   VM_HOST: ${{ secrets.VM_HOST }}
   VM_USER: ${{ secrets.VM_USER }}
 
