@@ -1,0 +1,23 @@
+services:
+  app:
+    image: ghcr.io/ThomasBDC/CDonVM:latest    # change OWNER/REPO
+    env_file:
+      - ./app/app.env
+    restart: always
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health || curl -fsS http://localhost:5000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:stable
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
