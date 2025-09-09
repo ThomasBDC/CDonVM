@@ -46,17 +46,17 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_cd
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_cd
           ssh-keyscan -H "${{ env.VM_HOST }}" >> ~/.ssh/known_hosts
+      - name: Copy compose.yml to VM
+        run: |
+          ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} 'sudo mkdir -p /opt/${{ env.APP }} && sudo chown -R $USER:$USER /opt/${{ env.APP }}'
+          scp -i ~/.ssh/id_cd CDonVM/ops/compose.yml ${{ env.VM_USER }}@${{ env.VM_HOST }}:/opt/${{ env.APP }}/compose.yml
 
-      - name: Deploy on VM
+      - name: Deploy
         run: |
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} '
             set -e
-            sudo mkdir -p /opt/${{ env.APP }}
-            sudo chown -R $USER:$USER /opt/${{ env.APP }}
-            cd /opt/${{ env.APP }}
             docker pull '"${{ env.IMAGE_LATEST }}"'
-            sudo systemctl start cdonvm-compose || true
-            docker compose up -d
+            docker compose -f /opt/'"${{ env.APP }}"'/compose.yml up -d
             docker image prune -f
           '
 
