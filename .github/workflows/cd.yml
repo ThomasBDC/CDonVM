@@ -51,12 +51,15 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_cd ${{ env.VM_USER }}@${{ env.VM_HOST }} '
             set -e
+            sudo mkdir -p /opt/${{ env.APP }}
+            sudo chown -R $USER:$USER /opt/${{ env.APP }}
             cd /opt/${{ env.APP }}
             docker pull '"${{ env.IMAGE_LATEST }}"'
             sudo systemctl start cdonvm-compose || true
             docker compose up -d
             docker image prune -f
           '
+
 
 
       - name: Smoke test
